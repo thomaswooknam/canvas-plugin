@@ -1,0 +1,5 @@
+arrow==1.4.0
+python-dateutil==2.9.0.post0
+six==1.17.0
+sqlglot==30.8.0
+tzdata==2026.2
