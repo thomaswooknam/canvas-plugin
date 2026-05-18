@@ -23,6 +23,10 @@ import logging
 logger = logging.getLogger(__name__)
 
 class BillingComplianceAutomationPlugin(CanvasPlugin):
+    """
+    Automates EMR compliance guardrails and external billing notifications
+    when a patients residential state changes relative to the clinics operating region.
+    """
     CONFIG_SCHEMA = {
         "HOME_STATE": {"type": "string", "required": True},
         "BILLING_WEBHOOK_URL": {"type": "string", "required": True},
@@ -37,7 +41,6 @@ class BillingComplianceAutomationPlugin(CanvasPlugin):
         patient_record = event.context.get("patient", {})
         patient_id = patient_record.get("id")
         
-        # Extract and sanitize state data
         addresses = patient_record.get("addresses", [])
         if not addresses:
             return EventResponse(success=True)
@@ -45,21 +48,18 @@ class BillingComplianceAutomationPlugin(CanvasPlugin):
         primary_address = next((addr for addr in addresses if addr.get("use") == "home"), addresses[0])
         patient_state = primary_address.get("state", "").strip().upper()
 
-        # Inspect current EMR state tags to ensure idempotence
         current_labels = patient_record.get("labels", [])
         has_compliance_hold = "OUT_OF_STATE_COMPLIANCE_HOLD" in current_labels
 
         generated_effects = []
 
-        # CONDITION 1: Patient is out-of-state
+        # Target Scenario: Patient resides outside the primary operating state (e.g., MA instead of NH)
         if patient_state and patient_state != home_state:
-            # Only add the EMR hold label if it is not already there (prevents duplicate DB writes)
             if not has_compliance_hold:
                 generated_effects.append(
                     UpdatePatientLabels(patient_id=patient_id, labels_to_add=["OUT_OF_STATE_COMPLIANCE_HOLD"])
                 )
 
-            # Dispatch external notification payload to billing infrastructure
             payload = {
                 "event_type": "billing.compliance.state_transition",
                 "canvas_patient_id": patient_id,
@@ -71,9 +71,8 @@ class BillingComplianceAutomationPlugin(CanvasPlugin):
                 CallExternalAPI(url=webhook_url, method="POST", headers=headers, payload=payload)
             )
 
-        # CONDITION 2: Patient moved BACK into home operating state
+        # Resolution Scenario: Patient shifts back into the primary operating state (e.g., NH)
         elif patient_state == home_state and has_compliance_hold:
-            # Programmatically clean up the EMR hold label automatically
             generated_effects.append(
                 UpdatePatientLabels(patient_id=patient_id, labels_to_remove=["OUT_OF_STATE_COMPLIANCE_HOLD"])
             )
