@@ -1,4 +1,3 @@
-
 try:
     from canvas_sdk.plugins import CanvasPlugin
     from canvas_sdk.events import EventResponse, PatientCreated
@@ -12,15 +11,12 @@ except ImportError:
     class PatientCreated: pass
     class CallExternalAPI:
         def __init__(self, url, method, headers=None, payload=None):
-            self.url = url
-            self.method = method
-            self.headers = headers or {}
-            self.payload = payload or {}
+            self.url = url; self.method = method; self.headers = headers or {}; self.payload = payload or {}
 
 import logging
 logger = logging.getLogger(__name__)
 
-class OutOfStateBillingAlerterPlugin(CanvasPlugin):
+class BillingComplianceAutomationPlugin(CanvasPlugin):
     CONFIG_SCHEMA = {
         "HOME_STATE": {"type": "string", "required": True},
         "BILLING_WEBHOOK_URL": {"type": "string", "required": True},

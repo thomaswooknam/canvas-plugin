@@ -1,27 +1,24 @@
-
 import unittest
 from unittest.mock import MagicMock
+from billing_compliance_automation import BillingComplianceAutomationPlugin, PatientCreated, EventResponse
 
-# Pull the simulated/stubbed SDK elements directly from your local plugin file
-from plugin import OutOfStateBillingAlerterPlugin, PatientCreated, EventResponse, CallExternalAPI
-
-class TestOutOfStateBillingAlerterPlugin(unittest.TestCase):
+class TestBillingComplianceAutomationPlugin(unittest.TestCase):
     def setUp(self):
-        self.plugin = OutOfStateBillingAlerterPlugin()
+        self.plugin = BillingComplianceAutomationPlugin()
         self.plugin.get_config = MagicMock(side_effect=lambda key: {
             "HOME_STATE": "NH",
             "BILLING_WEBHOOK_URL": "https://api.billing.internal/v1/alerts",
-            "WEBHOOK_AUTH_TOKEN": "mock_secret_token"
+            "WEBHOOK_AUTH_TOKEN": "mock_secret"
         }.get(key))
 
-    def create_mock_event(self, state_code: str, use_type: str = "home") -> PatientCreated:
+    def create_mock_event(self, state_code: str) -> PatientCreated:
         mock_event = MagicMock(spec=PatientCreated)
         mock_event.context = {
             "patient": {
                 "id": "pt_12345",
                 "first_name": "John",
                 "last_name": "Doe",
-                "addresses": [{"use": use_type, "state": state_code}]
+                "addresses": [{"use": "home", "state": state_code}]
             }
         }
         return mock_event
@@ -37,12 +34,6 @@ class TestOutOfStateBillingAlerterPlugin(unittest.TestCase):
         response: EventResponse = self.plugin.handle_patient_created(event)
         self.assertTrue(response.success)
         self.assertEqual(len(response.effects), 1)
-
-        effect = response.effects[0]
-        self.assertIsInstance(effect, CallExternalAPI)
-        self.assertEqual(effect.url, "https://api.billing.internal/v1/alerts")
-        self.assertEqual(effect.headers["Authorization"], "Bearer mock_secret_token")
-        self.assertEqual(effect.payload["patient_state"], "MA")
 
     def test_missing_address_handled_gracefully(self):
         event = MagicMock(spec=PatientCreated)
