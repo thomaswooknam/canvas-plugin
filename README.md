@@ -1,4 +1,4 @@
-# Canvas EMR Extensibility Suite
+# Canvas EMR Extensibility Suite (PoC)
 
 A production-grade collection of event-driven, platform-agnostic automation plugins built for the Canvas EMR SDK ecosystem. This repository demonstrates defensive data architecture, state-machine idempotency, and clinical data integrity within complex healthcare data environments.
 
